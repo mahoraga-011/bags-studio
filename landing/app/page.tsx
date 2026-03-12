@@ -55,9 +55,9 @@ const features = [
 ];
 
 const transforms = [
-  { from: "Hype", to: "Community" },
-  { from: "Holders", to: "Supporters" },
-  { from: "Activity", to: "Momentum" },
+  { from: "Hype", to: "Community", img: "/hype-community.png" },
+  { from: "Holders", to: "Supporters", img: "/holders-sopprters.png" },
+  { from: "Activity", to: "Momentum", img: "/activity-momentum.png" },
 ];
 
 const steps = [
@@ -281,40 +281,46 @@ export default function Home() {
               </motion.p>
             </div>
 
-            {/* Transform rows */}
-            <div className="flex flex-col gap-5">
+            {/* Transform cards */}
+            <div className="grid gap-8 md:grid-cols-3">
               {transforms.map((t, i) => (
-                <motion.div key={t.from} initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ duration: 0.5, delay: i * 0.12 }}
-                  className="group relative overflow-hidden rounded-2xl border border-border-subtle bg-surface transition-all hover:border-green/20">
-                  <div className="flex items-center">
-                    {/* Left: "From" side */}
-                    <div className="flex flex-1 items-center gap-4 px-8 py-7">
-                      <span className="text-[10px] tracking-widest text-gray-600 uppercase" style={mono}>{String(i + 1).padStart(2, "0")}</span>
-                      <span className="text-2xl font-extrabold text-gray-500 line-through decoration-gray-600/50 md:text-3xl" style={display}>{t.from}</span>
-                    </div>
+                <motion.div key={t.from} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ duration: 0.5, delay: i * 0.15 }}
+                  className="group relative overflow-hidden rounded-2xl border border-border-subtle bg-surface transition-all hover:border-green/20 hover:bg-surface-2">
+                  {/* Illustration */}
+                  <div className="relative flex items-center justify-center overflow-hidden bg-black/40 px-6 pt-8 pb-4">
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-green/[0.03] to-transparent" />
+                    <Image
+                      src={t.img}
+                      alt={`${t.from} to ${t.to}`}
+                      width={400}
+                      height={300}
+                      className="relative z-10 h-44 w-auto object-contain drop-shadow-[0_0_30px_rgba(0,230,118,0.1)] transition-transform duration-500 group-hover:scale-105 md:h-52"
+                    />
+                  </div>
 
-                    {/* Arrow */}
-                    <div className="flex items-center gap-3 px-4">
-                      <div className="h-px w-8 bg-gradient-to-r from-gray-600 to-green/60 md:w-16" />
-                      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0 text-green" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                      </svg>
-                      <div className="h-px w-8 bg-gradient-to-r from-green/60 to-green md:w-16" />
+                  {/* Labels */}
+                  <div className="px-6 py-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] tracking-widest text-gray-600 uppercase" style={mono}>{String(i + 1).padStart(2, "0")}</span>
+                        <span className="text-lg font-extrabold text-gray-500 line-through decoration-gray-600/50" style={display}>{t.from}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-gray-600" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                        </svg>
+                      </div>
                     </div>
-
-                    {/* Right: "To" side */}
-                    <div className="flex flex-1 items-center justify-end gap-4 px-8 py-7">
-                      <span className="text-glow text-2xl font-extrabold text-green md:text-3xl" style={display}>{t.to}</span>
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-muted">
-                        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-green" stroke="currentColor" strokeWidth={2}>
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="h-px flex-1 bg-gradient-to-r from-green/30 to-transparent" />
+                      <span className="text-glow text-2xl font-extrabold text-green" style={display}>{t.to}</span>
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-muted">
+                        <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5 text-green" stroke="currentColor" strokeWidth={2.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                         </svg>
                       </div>
                     </div>
                   </div>
-
-                  {/* Bottom progress accent */}
-                  <div className="h-px w-full bg-gradient-to-r from-transparent via-green/30 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
                 </motion.div>
               ))}
             </div>
