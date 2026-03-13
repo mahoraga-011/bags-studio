@@ -149,3 +149,135 @@ export interface CoinRecord {
   image_url: string;
   connected_at: string;
 }
+
+// Engagement types
+
+export type PointSource = 'hold' | 'claim' | 'referral' | 'quest' | 'streak';
+export type QuestType = 'hold_duration' | 'claim_count' | 'referral_count' | 'social_share' | 'custom';
+export type ReferralStatus = 'pending' | 'verified';
+export type SubmissionStatus = 'pending' | 'approved' | 'rejected';
+export type FundingSource = 'bags_amm' | 'partner' | 'direct';
+export type FeedEventType = 'quest_complete' | 'referral_verified' | 'streak_milestone' | 'tier_up' | 'reward_claimed';
+
+export interface EngagementPoints {
+  id: string;
+  mint_address: string;
+  wallet: string;
+  points: number;
+  source: PointSource;
+  source_id: string | null;
+  created_at: string;
+}
+
+export interface EngagementLeaderboardEntry {
+  mint_address: string;
+  wallet: string;
+  total_points: number;
+  referral_points: number;
+  quest_points: number;
+  streak_points: number;
+  hold_points: number;
+  rank: number;
+  updated_at: string;
+}
+
+export interface ReferralCode {
+  code: string;
+  mint_address: string;
+  wallet: string;
+  created_at: string;
+}
+
+export interface Referral {
+  id: string;
+  mint_address: string;
+  referrer_wallet: string;
+  referred_wallet: string;
+  referral_code: string;
+  status: ReferralStatus;
+  verified_at: string | null;
+  created_at: string;
+}
+
+export interface Quest {
+  id: string;
+  mint_address: string;
+  creator_wallet: string;
+  title: string;
+  description: string | null;
+  quest_type: QuestType;
+  points_reward: number;
+  target_value: number;
+  requires_approval: boolean;
+  max_completions: number | null;
+  active: boolean;
+  expires_at: string | null;
+  created_at: string;
+}
+
+export interface QuestCompletion {
+  id: string;
+  quest_id: string;
+  wallet: string;
+  completed_at: string;
+}
+
+export interface QuestSubmission {
+  id: string;
+  quest_id: string;
+  wallet: string;
+  proof_url: string | null;
+  status: SubmissionStatus;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
+export interface ActivityFeedItem {
+  id: string;
+  mint_address: string;
+  wallet: string;
+  event_type: FeedEventType;
+  title: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface HoldingStreak {
+  mint_address: string;
+  wallet: string;
+  current_streak: number;
+  longest_streak: number;
+  last_checked_at: string;
+}
+
+export interface RewardVault {
+  mint_address: string;
+  vault_wallet: string;
+  fee_share_bps: number;
+  funding_source: FundingSource;
+  total_claimed: number;
+  total_distributed: number;
+  created_at: string;
+}
+
+export interface RewardEpoch {
+  id: string;
+  mint_address: string;
+  epoch_number: number;
+  vault_balance: number;
+  distributed: number;
+  eligible_wallets: number;
+  created_at: string;
+}
+
+export interface RewardClaim {
+  id: string;
+  epoch_id: string;
+  mint_address: string;
+  wallet: string;
+  points_at_snapshot: number;
+  reward_lamports: number;
+  claimed: boolean;
+  signature: string | null;
+  claimed_at: string | null;
+}
