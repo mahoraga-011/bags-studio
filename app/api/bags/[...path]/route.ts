@@ -31,3 +31,35 @@ export async function GET(
     return NextResponse.json({ error: 'Failed to fetch from Bags API' }, { status: 502 });
   }
 }
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> }
+) {
+  const { path } = await params;
+  const apiPath = path.join('/');
+  const url = `${BAGS_API_BASE}/${apiPath}`;
+
+  const apiKey = process.env.BAGS_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
+  }
+
+  try {
+    const body = await request.json();
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
+  } catch (err) {
+    console.error('Bags API proxy error:', err);
+    return NextResponse.json({ error: 'Failed to fetch from Bags API' }, { status: 502 });
+  }
+}
