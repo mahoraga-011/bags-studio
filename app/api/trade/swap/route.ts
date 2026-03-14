@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSwapTransaction } from '@/lib/bags-wrapper';
+import { logTrade, resolveTokenMint } from '@/lib/trades';
 
 export async function POST(request: NextRequest) {
   let body: Record<string, unknown>;
@@ -23,6 +24,18 @@ export async function POST(request: NextRequest) {
 
   try {
     const response = await createSwapTransaction({ inputMint, outputMint, amount, slippageBps, wallet });
+
+    // Log trade for volume tracking (non-blocking)
+    const tokenMint = resolveTokenMint(inputMint, outputMint);
+    logTrade({
+      mint_address: tokenMint,
+      wallet,
+      input_mint: inputMint,
+      output_mint: outputMint,
+      amount_in: Number(amount),
+      amount_out: 0,
+    }).catch(err => console.error('Trade log error:', err));
+
     return NextResponse.json({ transaction: response.transaction });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to create swap transaction';

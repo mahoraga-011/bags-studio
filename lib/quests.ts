@@ -2,6 +2,10 @@ import { getServiceSupabase, getSupabase } from './supabase';
 import { Quest, QuestCompletion, QuestSubmission } from './types';
 import { awardPoints } from './points';
 import { addFeedEvent } from './feed';
+import { getStreak } from './streaks';
+import { getSplTokenBalance } from './solana-rpc';
+import { getTradeVolume } from './trades';
+import { TIER_INDEX, TIER_ORDER } from './constants';
 
 /**
  * Create a new quest.
@@ -80,6 +84,7 @@ export async function getQuestWithProgress(
   completed: boolean;
   submission: QuestSubmission | null;
   completionCount: number;
+  progress: { current_value: number; target_value: number; percentage: number } | null;
 } | null> {
   const supabase = getSupabase();
   if (!supabase) return null;
@@ -99,6 +104,7 @@ export async function getQuestWithProgress(
 
   let completed = false;
   let submission: QuestSubmission | null = null;
+  let progress: { current_value: number; target_value: number; percentage: number } | null = null;
 
   if (wallet) {
     const { data: comp } = await supabase
@@ -118,6 +124,11 @@ export async function getQuestWithProgress(
       .single();
 
     submission = sub as QuestSubmission | null;
+
+    // Compute progress for auto-verifiable quests
+    if (!completed) {
+      progress = await getQuestProgress(quest as Quest, wallet);
+    }
   }
 
   return {
@@ -125,19 +136,134 @@ export async function getQuestWithProgress(
     completed,
     submission,
     completionCount: completionCount || 0,
+    progress,
   };
 }
 
 /**
- * Auto-check quest completion for verifiable quest types.
+ * Resolve current value server-side based on quest type.
+ * Returns -1 for manual-approval types (social_share, custom).
+ */
+async function resolveCurrentValue(quest: Quest, wallet: string): Promise<number> {
+  const mint = quest.mint_address;
+
+  switch (quest.quest_type) {
+    case 'hold_duration':
+    case 'streak': {
+      const streak = await getStreak(mint, wallet);
+      return streak?.current_streak || 0;
+    }
+
+    case 'claim_count': {
+      const supabase = getSupabase();
+      if (!supabase) return 0;
+      const { count } = await supabase
+        .from('engagement_points')
+        .select('*', { count: 'exact', head: true })
+        .eq('mint_address', mint)
+        .eq('wallet', wallet)
+        .eq('source', 'claim');
+      return count || 0;
+    }
+
+    case 'referral_count': {
+      const supabase = getSupabase();
+      if (!supabase) return 0;
+      const { count } = await supabase
+        .from('referrals')
+        .select('*', { count: 'exact', head: true })
+        .eq('mint_address', mint)
+        .eq('referrer_wallet', wallet)
+        .eq('status', 'verified');
+      return count || 0;
+    }
+
+    case 'token_balance': {
+      return await getSplTokenBalance(wallet, mint);
+    }
+
+    case 'trade_volume': {
+      return await getTradeVolume(mint, wallet);
+    }
+
+    case 'tier_reached': {
+      const supabase = getSupabase();
+      if (!supabase) return 0;
+      const { data: entry } = await supabase
+        .from('engagement_leaderboard')
+        .select('total_points, rank')
+        .eq('mint_address', mint)
+        .eq('wallet', wallet)
+        .single();
+      if (!entry) return 0;
+
+      // Get total count to determine percentile
+      const { count: totalWallets } = await supabase
+        .from('engagement_leaderboard')
+        .select('*', { count: 'exact', head: true })
+        .eq('mint_address', mint);
+
+      if (!totalWallets || totalWallets === 0) return 0;
+
+      const percentile = entry.rank / totalWallets;
+      // Determine tier from percentile
+      let tierIndex = TIER_INDEX.OG; // default
+      if (percentile <= 0.01) tierIndex = TIER_INDEX.Champion;
+      else if (percentile <= 0.05) tierIndex = TIER_INDEX.Catalyst;
+      else if (percentile <= 0.15) tierIndex = TIER_INDEX.Loyal;
+      else if (percentile <= 0.40) tierIndex = TIER_INDEX.Active;
+
+      return tierIndex;
+    }
+
+    case 'meta': {
+      const supabase = getSupabase();
+      if (!supabase) return 0;
+      // Count completed quests for this wallet+mint, excluding meta quests
+      const { data: completions } = await supabase
+        .from('quest_completions')
+        .select('quest_id, quests!inner(mint_address, quest_type)')
+        .eq('wallet', wallet)
+        .eq('quests.mint_address', mint)
+        .neq('quests.quest_type', 'meta');
+      return completions?.length || 0;
+    }
+
+    case 'social_share':
+    case 'custom':
+      return -1; // Manual approval only
+
+    default:
+      return -1;
+  }
+}
+
+/**
+ * Get quest progress for UI display.
+ */
+export async function getQuestProgress(
+  quest: Quest,
+  wallet: string,
+): Promise<{ current_value: number; target_value: number; percentage: number }> {
+  const currentValue = await resolveCurrentValue(quest, wallet);
+  const targetValue = quest.target_value;
+
+  return {
+    current_value: currentValue,
+    target_value: targetValue,
+    percentage: currentValue < 0 ? 0 : Math.min(100, Math.round((currentValue / targetValue) * 100)),
+  };
+}
+
+/**
+ * Auto-check quest completion using server-side verification.
  */
 export async function checkQuestCompletion(
   questId: string,
   wallet: string,
-  currentValue: number,
-): Promise<boolean> {
+): Promise<{ completed: boolean; current_value: number; target_value: number }> {
   const supabase = getServiceSupabase();
-  if (!supabase) return false;
+  if (!supabase) return { completed: false, current_value: 0, target_value: 0 };
 
   const { data: quest } = await supabase
     .from('quests')
@@ -145,18 +271,24 @@ export async function checkQuestCompletion(
     .eq('id', questId)
     .single();
 
-  if (!quest || !quest.active) return false;
+  if (!quest || !quest.active) return { completed: false, current_value: 0, target_value: 0 };
+
+  const typedQuest = quest as Quest;
 
   // Check expiry
-  if (quest.expires_at && new Date(quest.expires_at) < new Date()) return false;
+  if (typedQuest.expires_at && new Date(typedQuest.expires_at) < new Date()) {
+    return { completed: false, current_value: 0, target_value: typedQuest.target_value };
+  }
 
   // Check max completions
-  if (quest.max_completions) {
+  if (typedQuest.max_completions) {
     const { count } = await supabase
       .from('quest_completions')
       .select('*', { count: 'exact', head: true })
       .eq('quest_id', questId);
-    if ((count || 0) >= quest.max_completions) return false;
+    if ((count || 0) >= typedQuest.max_completions) {
+      return { completed: false, current_value: 0, target_value: typedQuest.target_value };
+    }
   }
 
   // Check already completed
@@ -167,13 +299,28 @@ export async function checkQuestCompletion(
     .eq('wallet', wallet)
     .single();
 
-  if (existing) return false;
+  if (existing) return { completed: true, current_value: typedQuest.target_value, target_value: typedQuest.target_value };
+
+  // Resolve current value server-side
+  const currentValue = await resolveCurrentValue(typedQuest, wallet);
+
+  // Manual approval types can't be auto-checked
+  if (currentValue < 0) {
+    return { completed: false, current_value: 0, target_value: typedQuest.target_value };
+  }
 
   // Check target value
-  if (currentValue < quest.target_value) return false;
+  if (currentValue < typedQuest.target_value) {
+    return { completed: false, current_value: currentValue, target_value: typedQuest.target_value };
+  }
 
   // Complete the quest
-  return await completeQuest(questId, wallet, quest as Quest);
+  const success = await completeQuest(questId, wallet, typedQuest);
+  return {
+    completed: success,
+    current_value: currentValue,
+    target_value: typedQuest.target_value,
+  };
 }
 
 /**

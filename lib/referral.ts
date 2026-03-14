@@ -2,6 +2,7 @@ import { getServiceSupabase, getSupabase } from './supabase';
 import { ReferralCode, Referral } from './types';
 import { REFERRAL_CODE_LENGTH, POINTS_REFERRER, POINTS_REFERRED } from './constants';
 import { awardPoints } from './points';
+import { getSplTokenBalance } from './solana-rpc';
 
 function generateCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -117,7 +118,8 @@ export async function createReferral(
 }
 
 /**
- * Verify a pending referral (called when referred wallet is confirmed as holder).
+ * Verify a pending referral by checking on-chain token balance.
+ * Only verifies if the referred wallet actually holds the token.
  */
 export async function verifyReferral(
   mint: string,
@@ -135,6 +137,10 @@ export async function verifyReferral(
     .single();
 
   if (!referral) return false;
+
+  // Check on-chain token balance — only verify if they actually hold
+  const balance = await getSplTokenBalance(referredWallet, mint);
+  if (balance <= 0) return false;
 
   const { error } = await supabase
     .from('referrals')

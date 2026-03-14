@@ -5,9 +5,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ mint: string; id: string }> }
 ) {
-  const { mint, id } = await params;
+  const { id } = await params;
 
-  let body: { wallet: string; current_value: number };
+  let body: { wallet: string };
   try {
     body = await request.json();
   } catch {
@@ -19,10 +19,10 @@ export async function POST(
   }
 
   try {
-    const completed = await checkQuestCompletion(id, body.wallet, body.current_value);
-    return NextResponse.json({ completed });
+    const result = await checkQuestCompletion(id, body.wallet);
+    return NextResponse.json(result);
   } catch (err) {
     console.error('Quest check error:', err);
-    return NextResponse.json({ error: 'Failed to check quest completion' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to check quest' }, { status: 500 });
   }
 }

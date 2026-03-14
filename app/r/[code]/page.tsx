@@ -24,11 +24,11 @@ function ReferralContent({ code }: { code: string }) {
     fetcher,
   );
 
-  // Record referral visit when wallet connects
+  // Record referral as pending when wallet connects
   useEffect(() => {
     if (!wallet || !data?.mint_address || recorded) return;
 
-    fetch(`/api/engage/${data.mint_address}/referral/verify`, {
+    fetch(`/api/engage/${data.mint_address}/referral/record`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ referred_wallet: wallet, referral_code: code }),
