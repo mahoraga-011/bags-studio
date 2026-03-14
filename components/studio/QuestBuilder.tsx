@@ -22,6 +22,7 @@ export default function QuestBuilder({ mint, creatorWallet }: QuestBuilderProps)
   const [expiresAt, setExpiresAt] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const selectedType = QUEST_TYPES.find(qt => qt.value === questType);
   const requiresApproval = questType === 'social_share' || questType === 'custom';
@@ -69,12 +70,30 @@ export default function QuestBuilder({ mint, creatorWallet }: QuestBuilderProps)
       }
 
       const quest = await res.json();
-      router.push(`/studio/${mint}/quests/${quest.id}`);
+      setSuccess(true);
+      setTimeout(() => router.push(`/studio/${mint}/quests/${quest.id}`), 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
       setSubmitting(false);
     }
   };
+
+  if (success) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="max-w-xl mx-auto text-center py-16"
+      >
+        <div className="w-16 h-16 rounded-full bg-green/10 border border-green/20 flex items-center justify-center mx-auto mb-4">
+          <span className="text-3xl text-green">&#10003;</span>
+        </div>
+        <h2 className="text-xl font-display font-bold mb-2">Quest Created!</h2>
+        <p className="text-sm text-gray-400 mb-1">&ldquo;{title}&rdquo; is now live for your supporters.</p>
+        <p className="text-xs text-gray-500">Redirecting to quest page...</p>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

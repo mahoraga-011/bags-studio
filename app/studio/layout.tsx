@@ -4,7 +4,9 @@ import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { WalletContextProvider } from '@/lib/wallet-context';
+import { ThemeProvider } from '@/lib/theme-context';
 import WalletStatus from '@/components/studio/WalletStatus';
+import ThemeToggle from '@/components/studio/ThemeToggle';
 
 function Sidebar() {
   const pathname = usePathname();
@@ -35,6 +37,7 @@ function Sidebar() {
   if (mint && mint !== 'launch') {
     links.push(
       { href: `/studio/${mint}`, label: 'Dashboard', icon: '▣' },
+      { href: `/studio/${mint}/community`, label: 'Community', icon: '💬' },
       { href: `/studio/${mint}/trade`, label: 'Trade', icon: '⇄' },
       { href: `/studio/${mint}/quests`, label: 'Quests', icon: '★' },
       { href: `/studio/${mint}/rewards`, label: 'Rewards', icon: '◎' },
@@ -129,21 +132,44 @@ function Sidebar() {
   );
 }
 
+function Header() {
+  const pathname = usePathname();
+  const isStudioHome = pathname === '/studio';
+  // Sidebar is hidden on studio home, so show logo in header there
+  // On subpages, sidebar has its own logo — only show header logo on mobile (where sidebar is collapsed)
+
+  return (
+    <header className="sticky top-0 z-10 flex items-center justify-between px-4 md:px-8 py-3 md:py-4 border-b border-border-subtle backdrop-blur-sm" style={{ backgroundColor: 'color-mix(in srgb, var(--t-black) 80%, transparent)' }}>
+      {isStudioHome ? (
+        <Link href="/">
+          <img src="/logo.png" alt="BagsStudio" className="h-7 md:h-8 w-auto" />
+        </Link>
+      ) : (
+        <Link href="/" className="ml-10 md:ml-0">
+          <img src="/logo.png" alt="BagsStudio" className="h-7 w-auto md:hidden" />
+          <div className="hidden md:block" />
+        </Link>
+      )}
+      <div className="flex items-center gap-2 sm:gap-3">
+        <ThemeToggle />
+        <WalletStatus />
+      </div>
+    </header>
+  );
+}
+
 export default function StudioLayout({ children }: { children: ReactNode }) {
   return (
+    <ThemeProvider>
     <WalletContextProvider>
       <div className="flex min-h-screen bg-black">
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="sticky top-0 z-10 flex items-center justify-between px-4 md:px-8 py-3 md:py-4 border-b border-border-subtle bg-black/80 backdrop-blur-sm">
-            <Link href="/" className="ml-10 md:ml-0">
-              <img src="/logo.png" alt="BagsStudio" className="h-7 md:h-8 w-auto" />
-            </Link>
-            <WalletStatus />
-          </header>
+          <Header />
           <main className="flex-1 p-4 md:p-8">{children}</main>
         </div>
       </div>
     </WalletContextProvider>
+    </ThemeProvider>
   );
 }

@@ -44,5 +44,9 @@ export default function NewQuestPage({ params }: { params: Promise<{ mint: strin
     );
   }
 
-  return <QuestBuilder mint={mint} creatorWallet={wallet} />;
+  return (
+    <div className="flex justify-center">
+      <QuestBuilder mint={mint} creatorWallet={wallet} />
+    </div>
+  );
 }

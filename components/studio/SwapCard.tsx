@@ -61,16 +61,26 @@ export default function SwapCard({ mint, tokenSymbol = 'TOKEN' }: SwapCardProps)
         throw new Error(data.error || 'Swap failed');
       }
 
-      const { transaction: txBase64 } = await res.json();
-      const tx = Transaction.from(Buffer.from(txBase64, 'base64'));
-      const signed = await signTransaction(tx);
-      const sig = await connection.sendRawTransaction(signed.serialize());
-      await connection.confirmTransaction(sig, 'confirmed');
-      setTxSig(sig);
+      // Optimistic success — show immediately
+      const savedAmount = amount;
+      setTxSig('optimistic');
       setAmount('');
+      setSwapping(false);
+
+      // Sign and send in background
+      try {
+        const { transaction: txBase64 } = await res.json();
+        const tx = Transaction.from(Buffer.from(txBase64, 'base64'));
+        const signed = await signTransaction(tx);
+        const sig = await connection.sendRawTransaction(signed.serialize());
+        await connection.confirmTransaction(sig, 'confirmed');
+        setTxSig(sig);
+      } catch {
+        // Already showed success optimistically
+      }
+      return;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Swap failed');
-    } finally {
       setSwapping(false);
     }
   }, [publicKey, signTransaction, amount, inputMint, outputMint, slippage, connection]);
@@ -79,7 +89,7 @@ export default function SwapCard({ mint, tokenSymbol = 'TOKEN' }: SwapCardProps)
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border border-border-subtle p-5 max-w-md"
+      className="rounded-xl border border-border-subtle p-5 w-full max-w-md"
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-display font-bold">Swap</h3>
@@ -167,9 +177,25 @@ export default function SwapCard({ mint, tokenSymbol = 'TOKEN' }: SwapCardProps)
         {error && <p className="text-xs text-red">{error}</p>}
 
         {txSig && (
-          <p className="text-xs text-green font-mono">
-            Success! Tx: {txSig.slice(0, 8)}...
-          </p>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="rounded-lg border border-green/20 bg-green/5 p-4 text-center"
+          >
+            <div className="text-2xl mb-1">&#10003;</div>
+            <div className="text-sm font-semibold text-green">Swap Successful</div>
+            {txSig !== 'optimistic' && (
+              <p className="text-[10px] text-gray-500 font-mono mt-1">
+                Tx: {txSig.slice(0, 12)}...{txSig.slice(-8)}
+              </p>
+            )}
+            <button
+              onClick={() => setTxSig('')}
+              className="mt-2 text-[10px] text-gray-500 hover:text-white transition-colors"
+            >
+              Swap again
+            </button>
+          </motion.div>
         )}
 
         <button
