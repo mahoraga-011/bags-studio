@@ -242,6 +242,35 @@ create table if not exists trade_logs (
   created_at timestamptz default now()
 );
 
+-- Community posts (social wall per token)
+create table if not exists community_posts (
+  id uuid primary key default uuid_generate_v4(),
+  mint_address text not null,
+  wallet text not null,
+  content text not null,
+  created_at timestamptz default now()
+);
+
+-- Post reactions
+create table if not exists post_reactions (
+  id uuid primary key default uuid_generate_v4(),
+  post_id uuid not null references community_posts(id) on delete cascade,
+  wallet text not null,
+  emoji text not null,
+  created_at timestamptz default now(),
+  unique (post_id, wallet, emoji)
+);
+
+-- Achievement badges
+create table if not exists achievements (
+  id uuid primary key default uuid_generate_v4(),
+  mint_address text not null,
+  wallet text not null,
+  badge_type text not null,
+  earned_at timestamptz default now(),
+  unique (mint_address, wallet, badge_type)
+);
+
 -- ============================================================
 -- Engagement Platform Indexes
 -- ============================================================
@@ -275,6 +304,10 @@ create index if not exists idx_reward_claims_mint on reward_claims(mint_address)
 create index if not exists idx_reward_claims_wallet on reward_claims(wallet);
 create index if not exists idx_trade_logs_mint_wallet on trade_logs(mint_address, wallet);
 create index if not exists idx_trade_logs_wallet on trade_logs(wallet);
+create index if not exists idx_community_posts_mint_time on community_posts(mint_address, created_at desc);
+create index if not exists idx_community_posts_wallet on community_posts(wallet);
+create index if not exists idx_post_reactions_post on post_reactions(post_id);
+create index if not exists idx_achievements_mint_wallet on achievements(mint_address, wallet);
 
 -- ============================================================
 -- Engagement Platform RLS
@@ -293,6 +326,9 @@ alter table holding_streaks enable row level security;
 alter table reward_epochs enable row level security;
 alter table reward_claims enable row level security;
 alter table trade_logs enable row level security;
+alter table community_posts enable row level security;
+alter table post_reactions enable row level security;
+alter table achievements enable row level security;
 
 -- Public read policies
 create policy "Public read reward_vaults" on reward_vaults for select using (true);
@@ -308,3 +344,6 @@ create policy "Public read holding_streaks" on holding_streaks for select using 
 create policy "Public read reward_epochs" on reward_epochs for select using (true);
 create policy "Public read reward_claims" on reward_claims for select using (true);
 create policy "Public read trade_logs" on trade_logs for select using (true);
+create policy "Public read community_posts" on community_posts for select using (true);
+create policy "Public read post_reactions" on post_reactions for select using (true);
+create policy "Public read achievements" on achievements for select using (true);

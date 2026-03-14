@@ -82,6 +82,20 @@ export const FEED_EVENT_LABELS: Record<string, string> = {
   reward_claimed: 'Reward Claimed',
 };
 
+// Community / Social
+export const ALLOWED_REACTIONS = ['🔥', '👑', '💎', '🚀', '💰'] as const;
+export const MAX_POST_LENGTH = 280;
+export const POINTS_COMMUNITY_POST = 5;
+
+export const BADGE_DEFINITIONS = [
+  { type: 'og_holder', label: 'OG Holder', description: 'Among the first 100 supporters', emoji: '🏆' },
+  { type: 'diamond_hands', label: 'Diamond Hands', description: '30+ day holding streak', emoji: '💎' },
+  { type: 'quest_master', label: 'Quest Master', description: 'Completed 5+ quests', emoji: '⭐' },
+  { type: 'evangelist', label: 'Evangelist', description: '10+ verified referrals', emoji: '📢' },
+  { type: 'whale', label: 'Whale', description: 'Top 1% on leaderboard', emoji: '🐋' },
+  { type: 'social_butterfly', label: 'Social Butterfly', description: '10+ community posts', emoji: '🦋' },
+] as const;
+
 // Bags API endpoints for wrapper features
 export const BAGS_WRAPPER_ENDPOINTS = {
   CREATE_TOKEN_INFO: '/token-launch/create-token-info',

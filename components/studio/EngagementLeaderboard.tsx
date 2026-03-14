@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { EngagementLeaderboardEntry } from '@/lib/types';
+import ProfileCard from './ProfileCard';
 
 interface EngagementLeaderboardProps {
   entries: EngagementLeaderboardEntry[];
@@ -16,6 +17,7 @@ export default function EngagementLeaderboard({
   mint,
 }: EngagementLeaderboardProps) {
   const [page, setPage] = useState(0);
+  const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
   const perPage = 25;
   const paged = entries.slice(page * perPage, (page + 1) * perPage);
   const totalPages = Math.ceil(entries.length / perPage);
@@ -89,7 +91,12 @@ export default function EngagementLeaderboard({
                   {e.rank || page * perPage + i + 1}
                 </td>
                 <td className="px-4 py-3 font-mono text-gray-300">
-                  {e.wallet.slice(0, 6)}...{e.wallet.slice(-4)}
+                  <button
+                    onClick={() => setSelectedWallet(e.wallet)}
+                    className="hover:text-green transition-colors"
+                  >
+                    {e.wallet.slice(0, 6)}...{e.wallet.slice(-4)}
+                  </button>
                 </td>
                 <td className="px-4 py-3 text-right font-mono font-bold text-green">
                   {Math.round(e.total_points).toLocaleString()}
@@ -132,6 +139,15 @@ export default function EngagementLeaderboard({
             Next
           </button>
         </div>
+      )}
+
+      {selectedWallet && (
+        <ProfileCard
+          mint={mint}
+          wallet={selectedWallet}
+          open={!!selectedWallet}
+          onClose={() => setSelectedWallet(null)}
+        />
       )}
     </div>
   );

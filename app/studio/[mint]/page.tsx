@@ -101,6 +101,7 @@ export default function CreatorDashboard({
         className="flex flex-wrap gap-3 mb-8"
       >
         {[
+          { href: `/studio/${mint}/community`, label: 'Community' },
           { href: `/studio/${mint}/trade`, label: 'Trade' },
           { href: `/studio/${mint}/apps`, label: 'Apps' },
           { href: `/studio/${mint}/quests`, label: 'Quests' },

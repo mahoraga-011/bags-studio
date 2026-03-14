@@ -281,3 +281,55 @@ export interface RewardClaim {
   signature: string | null;
   claimed_at: string | null;
 }
+
+// Social / Community types
+
+export interface CommunityPost {
+  id: string;
+  mint_address: string;
+  wallet: string;
+  content: string;
+  created_at: string;
+  reactions?: ReactionCount[];
+}
+
+export interface PostReaction {
+  id: string;
+  post_id: string;
+  wallet: string;
+  emoji: string;
+  created_at: string;
+}
+
+export interface ReactionCount {
+  emoji: string;
+  count: number;
+}
+
+export type BadgeType = 'og_holder' | 'diamond_hands' | 'quest_master' | 'evangelist' | 'whale' | 'social_butterfly';
+
+export interface Achievement {
+  id: string;
+  mint_address: string;
+  wallet: string;
+  badge_type: BadgeType;
+  earned_at: string;
+}
+
+export interface UserProfile {
+  wallet: string;
+  username: string | null;
+  pfp: string | null;
+  tier: ConvictionTier | null;
+  total_points: number;
+  hold_points: number;
+  quest_points: number;
+  referral_points: number;
+  streak_points: number;
+  current_streak: number;
+  longest_streak: number;
+  quests_completed: number;
+  referral_count: number;
+  post_count: number;
+  achievements: Achievement[];
+}
