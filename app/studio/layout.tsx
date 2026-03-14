@@ -25,7 +25,7 @@ function Sidebar() {
       { href: `/studio/${mint}/quests`, label: 'Quests', icon: '★' },
       { href: `/studio/${mint}/rewards`, label: 'Rewards', icon: '◎' },
       { href: `/studio/${mint}/apps`, label: 'Apps', icon: '⊞' },
-      { href: `/studio/${mint}/campaigns`, label: 'Campaigns', icon: '⬡' },
+      // { href: `/studio/${mint}/campaigns`, label: 'Campaigns', icon: '⬡' }, // v2
     );
   }
 

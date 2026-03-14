@@ -4,6 +4,7 @@ import { use } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { Campaign } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -14,11 +15,17 @@ export default function CampaignsPage({
   params: Promise<{ mint: string }>;
 }) {
   const { mint } = use(params);
+  const { publicKey } = useWallet();
+  const wallet = publicKey?.toBase58();
 
   const { data: campaigns, isLoading, error } = useSWR<Campaign[]>(
     `/api/campaigns?mint=${mint}`,
     fetcher
   );
+
+  const { data: dashData } = useSWR(`/api/dashboard/${mint}`, fetcher);
+  const creator = dashData?.creators?.find((c: { isCreator: boolean }) => c.isCreator);
+  const isCreator = wallet && creator?.wallet === wallet;
 
   return (
     <div>
@@ -32,12 +39,14 @@ export default function CampaignsPage({
           </Link>
           <h1 className="text-xl font-display font-bold">Campaigns</h1>
         </div>
-        <Link
-          href={`/studio/${mint}/campaigns/new`}
-          className="px-4 py-2 rounded-lg bg-green text-black font-semibold text-sm hover:bg-green-dark transition-colors"
-        >
-          New Campaign
-        </Link>
+        {isCreator && (
+          <Link
+            href={`/studio/${mint}/campaigns/new`}
+            className="px-4 py-2 rounded-lg bg-green text-black font-semibold text-sm hover:bg-green-dark transition-colors"
+          >
+            New Campaign
+          </Link>
+        )}
       </div>
 
       {error ? (
@@ -92,12 +101,14 @@ export default function CampaignsPage({
       ) : (
         <div className="text-center pt-12">
           <p className="text-gray-500 mb-4">No campaigns yet</p>
-          <Link
-            href={`/studio/${mint}/campaigns/new`}
-            className="text-green hover:underline text-sm"
-          >
-            Create your first campaign
-          </Link>
+          {isCreator && (
+            <Link
+              href={`/studio/${mint}/campaigns/new`}
+              className="text-green hover:underline text-sm"
+            >
+              Create your first campaign
+            </Link>
+          )}
         </div>
       )}
     </div>

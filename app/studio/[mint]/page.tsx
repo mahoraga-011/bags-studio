@@ -105,7 +105,7 @@ export default function CreatorDashboard({
           { href: `/studio/${mint}/apps`, label: 'Apps' },
           { href: `/studio/${mint}/quests`, label: 'Quests' },
           { href: `/studio/${mint}/rewards`, label: 'Rewards' },
-          { href: `/studio/${mint}/campaigns`, label: 'Campaigns' },
+          // { href: `/studio/${mint}/campaigns`, label: 'Campaigns' }, // v2
         ].map(link => (
           <Link
             key={link.href}
