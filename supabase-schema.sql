@@ -152,7 +152,7 @@ create table if not exists quests (
   creator_wallet text not null,
   title text not null,
   description text,
-  quest_type text not null check (quest_type in ('hold_duration', 'claim_count', 'referral_count', 'social_share', 'custom')),
+  quest_type text not null check (quest_type in ('hold_duration', 'claim_count', 'referral_count', 'social_share', 'custom', 'token_balance', 'trade_volume', 'streak', 'tier_reached', 'meta')),
   points_reward int not null default 50,
   target_value int default 1,
   requires_approval boolean default false,
@@ -230,6 +230,18 @@ create table if not exists reward_claims (
   unique (epoch_id, wallet)
 );
 
+-- Trade logs for volume tracking
+create table if not exists trade_logs (
+  id uuid primary key default uuid_generate_v4(),
+  mint_address text not null,
+  wallet text not null,
+  input_mint text not null,
+  output_mint text not null,
+  amount_in numeric not null,
+  amount_out numeric not null default 0,
+  created_at timestamptz default now()
+);
+
 -- ============================================================
 -- Engagement Platform Indexes
 -- ============================================================
@@ -261,6 +273,8 @@ create index if not exists idx_reward_epochs_mint on reward_epochs(mint_address)
 create index if not exists idx_reward_claims_epoch on reward_claims(epoch_id);
 create index if not exists idx_reward_claims_mint on reward_claims(mint_address);
 create index if not exists idx_reward_claims_wallet on reward_claims(wallet);
+create index if not exists idx_trade_logs_mint_wallet on trade_logs(mint_address, wallet);
+create index if not exists idx_trade_logs_wallet on trade_logs(wallet);
 
 -- ============================================================
 -- Engagement Platform RLS
@@ -278,6 +292,7 @@ alter table activity_feed enable row level security;
 alter table holding_streaks enable row level security;
 alter table reward_epochs enable row level security;
 alter table reward_claims enable row level security;
+alter table trade_logs enable row level security;
 
 -- Public read policies
 create policy "Public read reward_vaults" on reward_vaults for select using (true);
@@ -292,3 +307,4 @@ create policy "Public read activity_feed" on activity_feed for select using (tru
 create policy "Public read holding_streaks" on holding_streaks for select using (true);
 create policy "Public read reward_epochs" on reward_epochs for select using (true);
 create policy "Public read reward_claims" on reward_claims for select using (true);
+create policy "Public read trade_logs" on trade_logs for select using (true);

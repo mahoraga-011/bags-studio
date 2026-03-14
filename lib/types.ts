@@ -153,7 +153,7 @@ export interface CoinRecord {
 // Engagement types
 
 export type PointSource = 'hold' | 'claim' | 'referral' | 'quest' | 'streak';
-export type QuestType = 'hold_duration' | 'claim_count' | 'referral_count' | 'social_share' | 'custom';
+export type QuestType = 'hold_duration' | 'claim_count' | 'referral_count' | 'social_share' | 'custom' | 'token_balance' | 'trade_volume' | 'streak' | 'tier_reached' | 'meta';
 export type ReferralStatus = 'pending' | 'verified';
 export type SubmissionStatus = 'pending' | 'approved' | 'rejected';
 export type FundingSource = 'bags_amm' | 'partner' | 'direct';

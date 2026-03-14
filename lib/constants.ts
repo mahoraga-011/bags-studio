@@ -54,12 +54,25 @@ export const DECAY_RATE = 0.9; // 10% per month
 export const REFERRAL_CODE_LENGTH = 8;
 
 export const QUEST_TYPES = [
-  { value: 'hold_duration', label: 'Hold Duration' },
-  { value: 'claim_count', label: 'Claim Count' },
-  { value: 'referral_count', label: 'Referral Count' },
-  { value: 'social_share', label: 'Social Share' },
-  { value: 'custom', label: 'Custom' },
+  { value: 'hold_duration', label: 'Hold Duration', unit: 'days', description: 'Hold tokens for X days' },
+  { value: 'claim_count', label: 'Claim Count', unit: 'claims', description: 'Claim fees X times' },
+  { value: 'referral_count', label: 'Referral Count', unit: 'referrals', description: 'Refer X verified holders' },
+  { value: 'token_balance', label: 'Token Balance', unit: 'tokens', description: 'Hold at least X tokens' },
+  { value: 'trade_volume', label: 'Trade Volume', unit: 'tokens', description: 'Trade X total volume on platform' },
+  { value: 'streak', label: 'Holding Streak', unit: 'days', description: 'Maintain a holding streak of X days' },
+  { value: 'tier_reached', label: 'Tier Reached', unit: 'tier', description: 'Reach a specific conviction tier' },
+  { value: 'meta', label: 'Complete Quests', unit: 'quests', description: 'Complete X other quests' },
+  { value: 'social_share', label: 'Social Share', unit: '', description: 'Share on social media (manual approval)' },
+  { value: 'custom', label: 'Custom', unit: '', description: 'Custom quest (manual approval)' },
 ] as const;
+
+export const TIER_INDEX: Record<ConvictionTier, number> = {
+  OG: 1,
+  Active: 2,
+  Loyal: 3,
+  Catalyst: 4,
+  Champion: 5,
+};
 
 export const FEED_EVENT_LABELS: Record<string, string> = {
   quest_complete: 'Quest Completed',
