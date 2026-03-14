@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { QUEST_TYPES } from '@/lib/constants';
+import { QUEST_TYPES, TIER_ORDER } from '@/lib/constants';
 
 interface QuestBuilderProps {
   mint: string;
@@ -17,12 +17,20 @@ export default function QuestBuilder({ mint, creatorWallet }: QuestBuilderProps)
   const [questType, setQuestType] = useState('hold_duration');
   const [pointsReward, setPointsReward] = useState('50');
   const [targetValue, setTargetValue] = useState('1');
+  const [tierTarget, setTierTarget] = useState('Active');
   const [maxCompletions, setMaxCompletions] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const selectedType = QUEST_TYPES.find(qt => qt.value === questType);
   const requiresApproval = questType === 'social_share' || questType === 'custom';
+  const isTierQuest = questType === 'tier_reached';
+  const showTargetValue = !requiresApproval && !isTierQuest;
+
+  const TIER_TO_INDEX: Record<string, number> = {
+    OG: 1, Active: 2, Loyal: 3, Catalyst: 4, Champion: 5,
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +42,10 @@ export default function QuestBuilder({ mint, creatorWallet }: QuestBuilderProps)
     setSubmitting(true);
     setError('');
 
+    const finalTargetValue = isTierQuest
+      ? TIER_TO_INDEX[tierTarget] || 2
+      : parseInt(targetValue) || 1;
+
     try {
       const res = await fetch(`/api/engage/${mint}/quests`, {
         method: 'POST',
@@ -44,7 +56,7 @@ export default function QuestBuilder({ mint, creatorWallet }: QuestBuilderProps)
           description: description.trim() || null,
           quest_type: questType,
           points_reward: parseInt(pointsReward) || 50,
-          target_value: parseInt(targetValue) || 1,
+          target_value: finalTargetValue,
           requires_approval: requiresApproval,
           max_completions: maxCompletions ? parseInt(maxCompletions) : null,
           expires_at: expiresAt || null,
@@ -103,13 +115,14 @@ export default function QuestBuilder({ mint, creatorWallet }: QuestBuilderProps)
                 key={qt.value}
                 type="button"
                 onClick={() => setQuestType(qt.value)}
-                className={`px-4 py-2.5 rounded-lg text-sm font-mono transition-colors ${
+                className={`px-4 py-2.5 rounded-lg text-left transition-colors ${
                   questType === qt.value
                     ? 'bg-green/20 text-green border border-green/30'
                     : 'bg-surface-2 text-gray-400 border border-border-subtle hover:border-green/20'
                 }`}
               >
-                {qt.label}
+                <div className="text-sm font-mono">{qt.label}</div>
+                <div className="text-[10px] text-gray-500 mt-0.5">{qt.description}</div>
               </button>
             ))}
           </div>
@@ -130,16 +143,38 @@ export default function QuestBuilder({ mint, creatorWallet }: QuestBuilderProps)
               className="w-full px-4 py-2.5 rounded-lg bg-surface-2 border border-border-subtle text-white focus:outline-none focus:border-green/50 transition-colors"
             />
           </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Target Value</label>
-            <input
-              type="number"
-              value={targetValue}
-              onChange={e => setTargetValue(e.target.value)}
-              placeholder="e.g., 7 (days)"
-              className="w-full px-4 py-2.5 rounded-lg bg-surface-2 border border-border-subtle text-white placeholder:text-gray-600 focus:outline-none focus:border-green/50 transition-colors"
-            />
-          </div>
+
+          {isTierQuest ? (
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">Required Tier</label>
+              <select
+                value={tierTarget}
+                onChange={e => setTierTarget(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg bg-surface-2 border border-border-subtle text-white focus:outline-none focus:border-green/50 transition-colors"
+              >
+                {TIER_ORDER.map(tier => (
+                  <option key={tier} value={tier}>{tier}</option>
+                ))}
+              </select>
+            </div>
+          ) : showTargetValue ? (
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">
+                Target Value {selectedType?.unit && (
+                  <span className="text-gray-600">({selectedType.unit})</span>
+                )}
+              </label>
+              <input
+                type="number"
+                value={targetValue}
+                onChange={e => setTargetValue(e.target.value)}
+                placeholder={`e.g., ${questType === 'token_balance' ? '10000' : questType === 'trade_volume' ? '50000' : '7'}`}
+                className="w-full px-4 py-2.5 rounded-lg bg-surface-2 border border-border-subtle text-white placeholder:text-gray-600 focus:outline-none focus:border-green/50 transition-colors"
+              />
+            </div>
+          ) : (
+            <div />
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">

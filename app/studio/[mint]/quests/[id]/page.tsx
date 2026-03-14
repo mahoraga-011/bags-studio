@@ -7,11 +7,42 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import SubmissionReview from '@/components/studio/SubmissionReview';
 import { Quest } from '@/lib/types';
+import { QUEST_TYPES, TIER_ORDER } from '@/lib/constants';
 
 const fetcher = (url: string) => fetch(url).then(r => {
   if (!r.ok) throw new Error(`${r.status}`);
   return r.json();
 });
+
+const INDEX_TO_TIER: Record<number, string> = {
+  1: 'OG', 2: 'Active', 3: 'Loyal', 4: 'Catalyst', 5: 'Champion',
+};
+
+function questTypeLabel(type: string): string {
+  return QUEST_TYPES.find(qt => qt.value === type)?.label || type;
+}
+
+function formatProgress(quest: Quest, currentValue: number, targetValue: number): string {
+  switch (quest.quest_type) {
+    case 'hold_duration':
+    case 'streak':
+      return `${currentValue}/${targetValue} days`;
+    case 'claim_count':
+      return `${currentValue}/${targetValue} claims`;
+    case 'referral_count':
+      return `${currentValue}/${targetValue} referrals`;
+    case 'token_balance':
+      return `${currentValue.toLocaleString()}/${targetValue.toLocaleString()} tokens`;
+    case 'trade_volume':
+      return `${currentValue.toLocaleString()}/${targetValue.toLocaleString()} volume`;
+    case 'tier_reached':
+      return `${INDEX_TO_TIER[currentValue] || 'None'} → ${INDEX_TO_TIER[targetValue] || 'Unknown'}`;
+    case 'meta':
+      return `${currentValue}/${targetValue} quests completed`;
+    default:
+      return `${currentValue}/${targetValue}`;
+  }
+}
 
 export default function QuestDetailPage({
   params,
@@ -26,9 +57,10 @@ export default function QuestDetailPage({
   const [proofUrl, setProofUrl] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [checkResult, setCheckResult] = useState<{ current_value: number; target_value: number } | null>(null);
 
   const { data: questData, isLoading, error: fetchError, mutate } = useSWR(
-    `/api/engage/${mint}/quests/${id}`,
+    wallet ? `/api/engage/${mint}/quests/${id}?wallet=${wallet}` : `/api/engage/${mint}/quests/${id}`,
     fetcher,
   );
 
@@ -38,11 +70,12 @@ export default function QuestDetailPage({
 
   const quest: Quest | null = questData?.quest || null;
   const submissions = questData?.submissions || [];
-  const completions = questData?.completions || [];
+  const completed = questData?.completed || false;
+  const completionCount = questData?.completionCount || 0;
+  const progress = questData?.progress || null;
 
   const creator = dashData?.creators?.find((c: { isCreator: boolean }) => c.isCreator);
   const isCreator = wallet && creator?.wallet === wallet;
-  const hasCompleted = wallet && completions.some((c: { wallet: string }) => c.wallet === wallet);
   const isApprovalType = quest?.requires_approval;
   const isAutoVerifiable = quest && !quest.requires_approval;
 
@@ -90,10 +123,12 @@ export default function QuestDetailPage({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Check failed');
 
+      setCheckResult({ current_value: data.current_value, target_value: data.target_value });
+
       if (data.completed) {
         setMessage(`Quest completed! +${quest?.points_reward || 0} points`);
       } else {
-        setMessage(data.message || 'Not yet complete. Keep going!');
+        setMessage('Not yet complete. Keep going!');
       }
       mutate();
     } catch (err) {
@@ -122,6 +157,9 @@ export default function QuestDetailPage({
     );
   }
 
+  // Use checkResult if available, otherwise use progress from API
+  const displayProgress = checkResult || progress;
+
   return (
     <div className="max-w-2xl">
       <Link
@@ -148,7 +186,7 @@ export default function QuestDetailPage({
 
           <div className="flex flex-wrap gap-2 text-[10px]">
             <span className="px-2 py-0.5 rounded-full bg-surface-2 border border-border-subtle text-gray-400 font-mono">
-              {quest.quest_type}
+              {questTypeLabel(quest.quest_type)}
             </span>
             {quest.requires_approval && (
               <span className="px-2 py-0.5 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-yellow-400 font-mono">
@@ -162,10 +200,30 @@ export default function QuestDetailPage({
             )}
             {quest.max_completions && (
               <span className="px-2 py-0.5 rounded-full bg-surface-2 border border-border-subtle text-gray-500">
-                {completions.length}/{quest.max_completions} completed
+                {completionCount}/{quest.max_completions} completed
               </span>
             )}
           </div>
+
+          {/* Progress bar for auto-verifiable quests */}
+          {displayProgress && displayProgress.current_value >= 0 && !completed && (
+            <div className="mt-4">
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <span className="text-gray-400">Progress</span>
+                <span className="font-mono text-gray-300">
+                  {formatProgress(quest, displayProgress.current_value, displayProgress.target_value)}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-green transition-all duration-500"
+                  style={{
+                    width: `${Math.min(100, Math.round((displayProgress.current_value / displayProgress.target_value) * 100))}%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Creator: submission review */}
@@ -181,7 +239,7 @@ export default function QuestDetailPage({
         )}
 
         {/* Supporter actions */}
-        {wallet && !isCreator && !hasCompleted && (
+        {wallet && !isCreator && !completed && (
           <div className="rounded-xl border border-border-subtle p-5 space-y-4">
             {isAutoVerifiable && (
               <button
@@ -222,7 +280,7 @@ export default function QuestDetailPage({
           </div>
         )}
 
-        {hasCompleted && (
+        {completed && (
           <div className="rounded-xl border border-green/20 bg-green/5 p-5 text-center">
             <p className="text-sm text-green font-semibold">Quest Completed</p>
             <p className="text-xs text-gray-400 mt-1">
